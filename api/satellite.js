@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
   // Fetch from N2YO — all satellites within 90° radius (entire visible sky)
   const apiKey = process.env.N2YO_API_KEY;
-  const url = `https://api.n2yo.com/rest/v1/satellite/above/${lat}/${lng}/0/90/0/&apiKey=${apiKey}`;
+  const url = `https://api.n2yo.com/rest/v1/satellite/above/${lat}/${lng}/0/90/0/?apiKey=${apiKey}`;
 
   try {
     const response = await fetch(url);
