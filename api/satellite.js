@@ -225,6 +225,7 @@ function inferMission(name) {
   if (n.includes('QO-100'))    return 'AMATEUR RADIO';
   if (n.includes('SAUDISAT'))  return 'AMATEUR RADIO';
   if (n.includes('PCSAT'))     return 'AMATEUR RADIO';
+  if (n.includes('ION SCV'))   return 'AMATEUR RADIO';
   if (n.includes('DIWATA'))    return 'EARTH OBSERVATION';
   if (n.includes('SWARM'))     return 'IOT';
   if (n.includes('KEPLER'))    return 'IOT';
