@@ -208,6 +208,36 @@ function inferMission(name) {
   if (n.includes('HAWK'))      return 'SIGNALS INTELLIGENCE';
   if (n.includes('UMBRA'))     return 'EARTH OBSERVATION';
 
+  // Amateur radio
+  if (n.includes('CUPID'))     return 'AMATEUR RADIO';
+  if (n.includes('AMSAT'))     return 'AMATEUR RADIO';
+  if (n.includes('OSCAR'))     return 'AMATEUR RADIO';
+  if (n.includes('FUNCUBE'))   return 'AMATEUR RADIO';
+  if (n.includes('CUBESAT'))   return 'AMATEUR RADIO';
+  if (n.includes('FOX-1'))     return 'AMATEUR RADIO';
+  if (n.includes('UVSQ-SAT')) return 'AMATEUR RADIO';
+  if (n.includes('TEVEL'))     return 'AMATEUR RADIO';
+  if (n.includes('GREENCUBE')) return 'AMATEUR RADIO';
+  if (n.includes('JY1SAT'))    return 'AMATEUR RADIO';
+  if (n.includes('HAMSAT'))    return 'AMATEUR RADIO';
+  if (n.includes('STRAND'))    return 'AMATEUR RADIO';
+  if (n.includes('ESHAIL'))    return 'AMATEUR RADIO';
+  if (n.includes('QO-100'))    return 'AMATEUR RADIO';
+  if (n.includes('SAUDISAT'))  return 'AMATEUR RADIO';
+  if (n.includes('PCSAT'))     return 'AMATEUR RADIO';
+  if (n.includes('DIWATA'))    return 'EARTH OBSERVATION';
+  if (n.includes('SWARM'))     return 'IOT';
+  if (n.includes('KEPLER'))    return 'IOT';
+  if (n.includes('ASTRA'))     return 'COMMUNICATIONS';
+  if (n.includes('TELESAT'))   return 'COMMUNICATIONS';
+  if (n.includes('O3B'))       return 'INTERNET';
+  if (n.includes('CBERS'))     return 'EARTH OBSERVATION';
+  if (n.includes('RESOURCESAT')) return 'EARTH OBSERVATION';
+  if (n.includes('CARTOSAT'))  return 'EARTH OBSERVATION';
+  if (n.includes('OCEANSAT'))  return 'EARTH OBSERVATION';
+  if (n.includes('SARAL'))     return 'EARTH OBSERVATION';
+  if (n.includes('ASTROSAT'))  return 'SPACE TELESCOPE';
+
   return null;
 }
 
