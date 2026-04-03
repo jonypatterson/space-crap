@@ -283,26 +283,23 @@
 
     /* Pixel flags */
     .pflag {
-      display: block;
-      font-size: 18px;
-      line-height: 1.1;
-      letter-spacing: 1px;
+      display: inline-block;
+      font-size: 6px;
+      line-height: 1;
+      letter-spacing: 0;
       font-family: monospace;
       text-shadow: none;
-      margin-bottom: 10px;
+      vertical-align: middle;
+      margin-right: 12px;
     }
-    .pflag span { font-size: 18px; }
+    .pflag span { font-size: 6px; }
 
-    /* Flag positioned above name, left-aligned */
-    .flag-name-wrap {
+    /* Flag + name on same row */
+    .flag-name-row {
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: center;
       margin: 16px 0 4px;
-    }
-    .flag-name-wrap .pflag {
-      align-self: flex-start;
-      margin-left: 8px;
     }
 
     /* Stale data warning */
@@ -432,11 +429,11 @@
       </div>
 
       <div id="result">
-        <div class="flag-name-wrap">
+        <div class="flag-name-row">
           <div class="pflag" id="sat-flag"></div>
           <div class="sat-name" id="sat-name"></div>
-          <div class="type-badge" id="type-badge"></div>
         </div>
+        <div class="type-badge" id="type-badge"></div>
 
         <div class="decay-warning" id="decay-warning" style="display:none"></div>
 
@@ -596,55 +593,136 @@
         return map[code] || 'UNKNOWN';
       }
 
-      // Pixel-art flags using block chars (█ ▀ ▄)
+      // Pixel-art flags using block chars — 12x8 grid for more detail
       function pixelFlag(code) {
-        var B = '█'; // full block
+        var B = '█';
+        function r(n, c) { return '<span style="color:' + c + '">' + B.repeat(n) + '</span>'; }
+        function row() {
+          var s = '';
+          for (var i = 0; i < arguments.length; i += 2) s += r(arguments[i], arguments[i+1]);
+          return s + '<br>';
+        }
         var flags = {
-          'US':  '<span style="color:#3c3b6e">' + B+B+B + '</span><span style="color:#b22234">' + B+B+B + '</span><br>'
-               + '<span style="color:#3c3b6e">' + B+B+B + '</span><span style="color:#fff">' + B+B+B + '</span><br>'
-               + '<span style="color:#b22234">' + B+B+B+B+B+B + '</span>',
-          'CN':  '<span style="color:#de2910">' + B + '</span><span style="color:#ffde00">' + B + '</span><span style="color:#de2910">' + B+B+B+B + '</span><br>'
-               + '<span style="color:#de2910">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#de2910">' + B+B+B+B+B+B + '</span>',
-          'CIS': '<span style="color:#fff">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#0039a6">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#d52b1e">' + B+B+B+B+B+B + '</span>',
-          'FR':  '<span style="color:#002395">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ed2939">' + B+B + '</span><br>'
-               + '<span style="color:#002395">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ed2939">' + B+B + '</span><br>'
-               + '<span style="color:#002395">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ed2939">' + B+B + '</span>',
-          'UK':  '<span style="color:#012169">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#fff">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#012169">' + B + '</span><br>'
-               + '<span style="color:#fff">' + B + '</span><span style="color:#c8102e">' + B+B+B + '</span><span style="color:#fff">' + B + '</span><br>'
-               + '<span style="color:#012169">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#fff">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#012169">' + B + '</span>',
-          'J':   '<span style="color:#fff">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#fff">' + B+B + '</span><span style="color:#bc002d">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><br>'
-               + '<span style="color:#fff">' + B+B+B+B+B+B + '</span>',
-          'IN':  '<span style="color:#ff9933">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#fff">' + B+B + '</span><span style="color:#000080">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><br>'
-               + '<span style="color:#138808">' + B+B+B+B+B+B + '</span>',
-          'DE':  '<span style="color:#000">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#d00">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#fc0">' + B+B+B+B+B+B + '</span>',
-          'IT':  '<span style="color:#009246">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ce2b37">' + B+B + '</span><br>'
-               + '<span style="color:#009246">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ce2b37">' + B+B + '</span><br>'
-               + '<span style="color:#009246">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ce2b37">' + B+B + '</span>',
-          'ESA': '<span style="color:#003399">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#003399">' + B+B + '</span><span style="color:#fc0">' + B+B + '</span><span style="color:#003399">' + B+B + '</span><br>'
-               + '<span style="color:#003399">' + B+B+B+B+B+B + '</span>',
-          'KR':  '<span style="color:#fff">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#fff">' + B + '</span><span style="color:#c60c30">' + B + '</span><span style="color:#003478">' + B + '</span><span style="color:#fff">' + B+B+B + '</span><br>'
-               + '<span style="color:#fff">' + B+B+B+B+B+B + '</span>',
-          'CA':  '<span style="color:#d52b1e">' + B + '</span><span style="color:#fff">' + B+B+B+B + '</span><span style="color:#d52b1e">' + B + '</span><br>'
-               + '<span style="color:#d52b1e">' + B + '</span><span style="color:#fff">' + B + '</span><span style="color:#d52b1e">' + B+B + '</span><span style="color:#fff">' + B + '</span><span style="color:#d52b1e">' + B + '</span><br>'
-               + '<span style="color:#d52b1e">' + B + '</span><span style="color:#fff">' + B+B+B+B + '</span><span style="color:#d52b1e">' + B + '</span>',
-          'AU':  '<span style="color:#012169">' + B+B+B + '</span><span style="color:#e4002b">' + B + '</span><span style="color:#012169">' + B+B + '</span><br>'
-               + '<span style="color:#012169">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#012169">' + B+B+B+B+B+B + '</span>',
-          'BR':  '<span style="color:#009c3b">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#009c3b">' + B + '</span><span style="color:#ffdf00">' + B+B+B+B + '</span><span style="color:#009c3b">' + B + '</span><br>'
-               + '<span style="color:#009c3b">' + B+B+B+B+B+B + '</span>',
-          'IL':  '<span style="color:#0038b8">' + B+B+B+B+B+B + '</span><br>'
-               + '<span style="color:#fff">' + B+B + '</span><span style="color:#0038b8">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><br>'
-               + '<span style="color:#0038b8">' + B+B+B+B+B+B + '</span>',
+          'US': row(5,'#3c3b6e', 7,'#b22234')
+              + row(5,'#3c3b6e', 7,'#fff')
+              + row(5,'#3c3b6e', 7,'#b22234')
+              + row(5,'#3c3b6e', 7,'#fff')
+              + row(12,'#b22234')
+              + row(12,'#fff')
+              + row(12,'#b22234')
+              + row(12,'#fff'),
+          'CN': row(1,'#de2910', 1,'#ffde00', 10,'#de2910')
+              + row(2,'#ffde00', 10,'#de2910')
+              + row(1,'#de2910', 1,'#ffde00', 10,'#de2910')
+              + row(12,'#de2910')
+              + row(12,'#de2910')
+              + row(12,'#de2910')
+              + row(12,'#de2910')
+              + row(12,'#de2910'),
+          'CIS': row(12,'#fff')
+               + row(12,'#fff')
+               + row(12,'#0039a6')
+               + row(12,'#0039a6')
+               + row(12,'#0039a6')
+               + row(12,'#d52b1e')
+               + row(12,'#d52b1e')
+               + row(12,'#d52b1e'),
+          'FR': row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939')
+              + row(4,'#002395', 4,'#fff', 4,'#ed2939'),
+          'UK': row(1,'#012169', 1,'#fff', 1,'#c8102e', 1,'#012169', 1,'#012169', 1,'#c8102e', 1,'#fff', 1,'#c8102e', 1,'#012169', 1,'#012169', 1,'#c8102e', 1,'#012169')
+              + row(1,'#012169', 1,'#012169', 1,'#fff', 1,'#c8102e', 1,'#012169', 1,'#c8102e', 1,'#fff', 1,'#012169', 1,'#012169', 1,'#c8102e', 1,'#012169', 1,'#012169')
+              + row(1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#fff', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#fff', 1,'#c8102e', 1,'#c8102e')
+              + row(1,'#fff', 1,'#fff', 1,'#fff', 1,'#fff', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#fff', 1,'#fff', 1,'#fff', 1,'#fff')
+              + row(1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#fff', 1,'#c8102e', 1,'#c8102e', 1,'#fff', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e', 1,'#c8102e')
+              + row(1,'#012169', 1,'#012169', 1,'#c8102e', 1,'#fff', 1,'#012169', 1,'#c8102e', 1,'#fff', 1,'#012169', 1,'#c8102e', 1,'#012169', 1,'#012169', 1,'#012169')
+              + row(1,'#012169', 1,'#c8102e', 1,'#fff', 1,'#012169', 1,'#012169', 1,'#c8102e', 1,'#012169', 1,'#012169', 1,'#fff', 1,'#c8102e', 1,'#012169', 1,'#012169')
+              + row(1,'#c8102e', 1,'#fff', 1,'#012169', 1,'#012169', 1,'#012169', 1,'#c8102e', 1,'#012169', 1,'#012169', 1,'#012169', 1,'#fff', 1,'#c8102e', 1,'#012169'),
+          'J':  row(12,'#fff')
+              + row(12,'#fff')
+              + row(4,'#fff', 4,'#bc002d', 4,'#fff')
+              + row(4,'#fff', 4,'#bc002d', 4,'#fff')
+              + row(4,'#fff', 4,'#bc002d', 4,'#fff')
+              + row(4,'#fff', 4,'#bc002d', 4,'#fff')
+              + row(12,'#fff')
+              + row(12,'#fff'),
+          'IN': row(12,'#ff9933')
+              + row(12,'#ff9933')
+              + row(12,'#ff9933')
+              + row(5,'#fff', 2,'#000080', 5,'#fff')
+              + row(5,'#fff', 2,'#000080', 5,'#fff')
+              + row(12,'#138808')
+              + row(12,'#138808')
+              + row(12,'#138808'),
+          'DE': row(12,'#000')
+              + row(12,'#000')
+              + row(12,'#000')
+              + row(12,'#d00')
+              + row(12,'#d00')
+              + row(12,'#fc0')
+              + row(12,'#fc0')
+              + row(12,'#fc0'),
+          'IT': row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37')
+              + row(4,'#009246', 4,'#fff', 4,'#ce2b37'),
+          'ESA': row(12,'#003399')
+               + row(12,'#003399')
+               + row(4,'#003399', 4,'#fc0', 4,'#003399')
+               + row(4,'#003399', 4,'#fc0', 4,'#003399')
+               + row(4,'#003399', 4,'#fc0', 4,'#003399')
+               + row(4,'#003399', 4,'#fc0', 4,'#003399')
+               + row(12,'#003399')
+               + row(12,'#003399'),
+          'KR': row(12,'#fff')
+              + row(12,'#fff')
+              + row(3,'#fff', 2,'#c60c30', 2,'#003478', 5,'#fff')
+              + row(3,'#fff', 2,'#003478', 2,'#c60c30', 5,'#fff')
+              + row(12,'#fff')
+              + row(12,'#fff')
+              + row(12,'#fff')
+              + row(12,'#fff'),
+          'CA': row(3,'#d52b1e', 6,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 6,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 2,'#fff', 2,'#d52b1e', 2,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 1,'#fff', 4,'#d52b1e', 1,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 1,'#fff', 4,'#d52b1e', 1,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 2,'#fff', 2,'#d52b1e', 2,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 6,'#fff', 3,'#d52b1e')
+              + row(3,'#d52b1e', 6,'#fff', 3,'#d52b1e'),
+          'AU': row(4,'#012169', 1,'#fff', 1,'#012169', 1,'#c8102e', 5,'#012169')
+              + row(2,'#012169', 1,'#fff', 1,'#012169', 1,'#c8102e', 1,'#012169', 1,'#fff', 5,'#012169')
+              + row(12,'#012169')
+              + row(12,'#012169')
+              + row(12,'#012169')
+              + row(12,'#012169')
+              + row(12,'#012169')
+              + row(12,'#012169'),
+          'BR': row(12,'#009c3b')
+              + row(2,'#009c3b', 8,'#ffdf00', 2,'#009c3b')
+              + row(1,'#009c3b', 4,'#ffdf00', 2,'#002776', 4,'#ffdf00', 1,'#009c3b')
+              + row(1,'#009c3b', 4,'#ffdf00', 2,'#002776', 4,'#ffdf00', 1,'#009c3b')
+              + row(2,'#009c3b', 8,'#ffdf00', 2,'#009c3b')
+              + row(12,'#009c3b')
+              + row(12,'#009c3b')
+              + row(12,'#009c3b'),
+          'IL': row(12,'#0038b8')
+              + row(12,'#fff')
+              + row(12,'#fff')
+              + row(4,'#fff', 4,'#0038b8', 4,'#fff')
+              + row(4,'#fff', 4,'#0038b8', 4,'#fff')
+              + row(12,'#fff')
+              + row(12,'#fff')
+              + row(12,'#0038b8'),
         };
         return flags[code] || null;
       }
