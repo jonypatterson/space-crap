@@ -8,7 +8,7 @@ const TLE_CACHE_KEY = 'celestrak:active_tle';
 const TLE_CACHE_TTL = 7200; // 2 hours in seconds
 
 const CELESTRAK_URL =
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=full-catalog&FORMAT=json';
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json';
 
 // -------------------------------------------------------------------
 // Parse CelesTrak JSON into satellite objects
