@@ -281,6 +281,19 @@
       color: #666;
     }
 
+    /* Pixel flags */
+    .pflag {
+      display: inline-block;
+      font-size: 10px;
+      line-height: 1;
+      letter-spacing: 0;
+      vertical-align: middle;
+      margin-right: 6px;
+      font-family: monospace;
+      text-shadow: none;
+    }
+    .pflag span { font-size: 10px; }
+
     /* Stale data warning */
     .data-stale {
       color: var(--amber) !important;
@@ -568,6 +581,59 @@
         return map[code] || 'UNKNOWN';
       }
 
+      // Pixel-art flags using block chars (█ ▀ ▄)
+      function pixelFlag(code) {
+        var B = '█'; // full block
+        var flags = {
+          'US':  '<span style="color:#3c3b6e">' + B+B+B + '</span><span style="color:#b22234">' + B+B+B + '</span><br>'
+               + '<span style="color:#3c3b6e">' + B+B+B + '</span><span style="color:#fff">' + B+B+B + '</span><br>'
+               + '<span style="color:#b22234">' + B+B+B+B+B+B + '</span>',
+          'CN':  '<span style="color:#de2910">' + B + '</span><span style="color:#ffde00">' + B + '</span><span style="color:#de2910">' + B+B+B+B + '</span><br>'
+               + '<span style="color:#de2910">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#de2910">' + B+B+B+B+B+B + '</span>',
+          'CIS': '<span style="color:#fff">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#0039a6">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#d52b1e">' + B+B+B+B+B+B + '</span>',
+          'FR':  '<span style="color:#002395">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ed2939">' + B+B + '</span><br>'
+               + '<span style="color:#002395">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ed2939">' + B+B + '</span><br>'
+               + '<span style="color:#002395">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ed2939">' + B+B + '</span>',
+          'UK':  '<span style="color:#012169">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#fff">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#012169">' + B + '</span><br>'
+               + '<span style="color:#fff">' + B + '</span><span style="color:#c8102e">' + B+B+B + '</span><span style="color:#fff">' + B + '</span><br>'
+               + '<span style="color:#012169">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#fff">' + B + '</span><span style="color:#c8102e">' + B + '</span><span style="color:#012169">' + B + '</span>',
+          'J':   '<span style="color:#fff">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#fff">' + B+B + '</span><span style="color:#bc002d">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><br>'
+               + '<span style="color:#fff">' + B+B+B+B+B+B + '</span>',
+          'IN':  '<span style="color:#ff9933">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#fff">' + B+B + '</span><span style="color:#000080">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><br>'
+               + '<span style="color:#138808">' + B+B+B+B+B+B + '</span>',
+          'DE':  '<span style="color:#000">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#d00">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#fc0">' + B+B+B+B+B+B + '</span>',
+          'IT':  '<span style="color:#009246">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ce2b37">' + B+B + '</span><br>'
+               + '<span style="color:#009246">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ce2b37">' + B+B + '</span><br>'
+               + '<span style="color:#009246">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><span style="color:#ce2b37">' + B+B + '</span>',
+          'ESA': '<span style="color:#003399">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#003399">' + B+B + '</span><span style="color:#fc0">' + B+B + '</span><span style="color:#003399">' + B+B + '</span><br>'
+               + '<span style="color:#003399">' + B+B+B+B+B+B + '</span>',
+          'KR':  '<span style="color:#fff">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#fff">' + B + '</span><span style="color:#c60c30">' + B + '</span><span style="color:#003478">' + B + '</span><span style="color:#fff">' + B+B+B + '</span><br>'
+               + '<span style="color:#fff">' + B+B+B+B+B+B + '</span>',
+          'CA':  '<span style="color:#d52b1e">' + B + '</span><span style="color:#fff">' + B+B+B+B + '</span><span style="color:#d52b1e">' + B + '</span><br>'
+               + '<span style="color:#d52b1e">' + B + '</span><span style="color:#fff">' + B + '</span><span style="color:#d52b1e">' + B+B + '</span><span style="color:#fff">' + B + '</span><span style="color:#d52b1e">' + B + '</span><br>'
+               + '<span style="color:#d52b1e">' + B + '</span><span style="color:#fff">' + B+B+B+B + '</span><span style="color:#d52b1e">' + B + '</span>',
+          'AU':  '<span style="color:#012169">' + B+B+B + '</span><span style="color:#e4002b">' + B + '</span><span style="color:#012169">' + B+B + '</span><br>'
+               + '<span style="color:#012169">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#012169">' + B+B+B+B+B+B + '</span>',
+          'BR':  '<span style="color:#009c3b">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#009c3b">' + B + '</span><span style="color:#ffdf00">' + B+B+B+B + '</span><span style="color:#009c3b">' + B + '</span><br>'
+               + '<span style="color:#009c3b">' + B+B+B+B+B+B + '</span>',
+          'IL':  '<span style="color:#0038b8">' + B+B+B+B+B+B + '</span><br>'
+               + '<span style="color:#fff">' + B+B + '</span><span style="color:#0038b8">' + B+B + '</span><span style="color:#fff">' + B+B + '</span><br>'
+               + '<span style="color:#0038b8">' + B+B+B+B+B+B + '</span>',
+        };
+        return flags[code] || null;
+      }
+
       function decodeCountry(code) {
         var map = {
           'US': 'UNITED STATES', 'CN': 'CHINA', 'CIS': 'RUSSIA',
@@ -643,7 +709,12 @@
         // Identity
         satIdEl.textContent      = sat.noradId || '\u2014';
         satIntlEl.textContent    = sat.objectId || '\u2014';
-        satCountryEl.textContent = decodeCountry(sat.country);
+        var flag = pixelFlag(sat.country);
+        if (flag) {
+          satCountryEl.innerHTML = '<span class="pflag">' + flag + '</span> ' + decodeCountry(sat.country);
+        } else {
+          satCountryEl.textContent = decodeCountry(sat.country);
+        }
         satMissionEl.textContent = sat.mission || '\u2014';
 
         // Position
