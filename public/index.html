@@ -21,7 +21,7 @@
       --cyan: #00e5ff;
       --green: #00ff88;
       --led-white: #e8e8e8;
-      --dim: #4a4a4a;
+      --dim: #7a7a7a;
       --dot-size: 4px;
     }
 
@@ -105,7 +105,7 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle, transparent 1px, rgba(5,5,5,0.65) 1.2px);
+        radial-gradient(circle, transparent 1px, rgba(5,5,5,0.35) 1.2px);
       background-size: var(--dot-size) var(--dot-size);
       pointer-events: none;
       z-index: 50;
@@ -216,16 +216,16 @@
       margin: 14px 0;
     }
     .data-label {
-      font-size: 18px;
+      font-size: 20px;
       color: var(--dim);
       text-transform: uppercase;
       letter-spacing: 1px;
       white-space: nowrap;
     }
     .data-value {
-      font-size: 22px;
+      font-size: 24px;
       color: var(--led-white);
-      text-shadow: 0 0 4px rgba(255,255,255,0.25);
+      text-shadow: 0 0 6px rgba(255,255,255,0.35);
       text-align: right;
     }
 
