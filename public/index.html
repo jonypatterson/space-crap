@@ -438,19 +438,19 @@
         statusEl.style.display = 'none';
         resultEl.classList.add('visible');
 
-        satNameEl.textContent = sat.satname || 'UNKNOWN';
-        satIdEl.textContent   = sat.satid   || '\u2014';
-        satAltEl.textContent  = sat.satalt != null ? sat.satalt.toFixed(1) + ' KM' : '\u2014';
-        satPosEl.textContent  = (sat.satlat != null && sat.satlng != null)
-          ? fmtCoord(sat.satlat, sat.satlng)
+        satNameEl.textContent = sat.name || 'UNKNOWN';
+        satIdEl.textContent   = sat.noradId   || '\u2014';
+        satAltEl.textContent  = sat.alt != null ? sat.alt.toFixed(1) + ' KM' : '\u2014';
+        satPosEl.textContent  = (sat.lat != null && sat.lng != null)
+          ? fmtCoord(sat.lat, sat.lng)
           : '\u2014';
         satAngleEl.textContent = sat.angularDistance != null
           ? sat.angularDistance.toFixed(1) + '°'
           : '\u2014';
-        satLaunchEl.textContent = sat.launchDate    || '\u2014';
-        satIntlEl.textContent   = sat.intDesignator || '\u2014';
+        satLaunchEl.textContent = sat.launchYear    || '\u2014';
+        satIntlEl.textContent   = '\u2014';
 
-        trackLinkEl.href = 'https://www.n2yo.com/satellite/?s=' + sat.satid;
+        trackLinkEl.href = 'https://www.n2yo.com/satellite/?s=' + sat.noradId;
 
         var now = new Date();
         lastChecked.textContent = 'LAST CHECK: ' + now.toLocaleTimeString();
