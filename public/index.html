@@ -727,6 +727,7 @@
               + row(12,'#0038b8'),
         };
         flags['IND'] = flags['IN'];
+        flags['PRC'] = flags['CN'];
         return flags[code] || null;
       }
 
@@ -734,7 +735,7 @@
         var map = {
           'US': 'UNITED STATES', 'CN': 'CHINA', 'CIS': 'RUSSIA',
           'FR': 'FRANCE', 'ESA': 'ESA', 'UK': 'UNITED KINGDOM',
-          'IN': 'INDIA', 'IND': 'INDIA', 'J': 'JAPAN', 'ISS': 'INTL SPACE STATION',
+          'IN': 'INDIA', 'IND': 'INDIA', 'PRC': 'CHINA', 'J': 'JAPAN', 'ISS': 'INTL SPACE STATION',
           'AB': 'ARAB LEAGUE',
         };
         return map[code] || code || 'UNKNOWN';
