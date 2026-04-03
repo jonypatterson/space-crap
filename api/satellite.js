@@ -7,40 +7,29 @@ const RATE_WINDOW = 60; // seconds
 const TLE_CACHE_KEY = 'celestrak:active_tle';
 const TLE_CACHE_TTL = 7200; // 2 hours in seconds
 
-const CELESTRAK_URL =
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json';
+// TLE text format is ~1.7MB vs 6.3MB for JSON — fits in Vercel's limits
+const CELESTRAK_TLE_URL =
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
 
 // -------------------------------------------------------------------
-// Parse CelesTrak JSON into satellite objects
+// Parse TLE text into lightweight satellite objects for bulk search
 // -------------------------------------------------------------------
-function parseSatellites(jsonData) {
+function parseTLEs(rawText) {
+  const lines = rawText.trim().split('\n').map(l => l.trim());
   const sats = [];
 
-  for (const obj of jsonData) {
-    const tle1 = obj.TLE_LINE1;
-    const tle2 = obj.TLE_LINE2;
+  for (let i = 0; i < lines.length - 2; i += 3) {
+    const name = lines[i];
+    const tle1 = lines[i + 1];
+    const tle2 = lines[i + 2];
 
-    if (!tle1 || !tle2) continue;
+    if (!tle1.startsWith('1 ') || !tle2.startsWith('2 ')) continue;
 
     try {
       const satrec = satellite.twoline2satrec(tle1, tle2);
-      sats.push({
-        name:         obj.OBJECT_NAME,
-        objectId:     obj.OBJECT_ID      || null,
-        objectType:   obj.OBJECT_TYPE    || 'UNKNOWN',
-        noradId:      String(obj.NORAD_CAT_ID),
-        epoch:        obj.EPOCH          || null,
-        inclination:  obj.INCLINATION    || null,
-        eccentricity: obj.ECCENTRICITY   || null,
-        meanMotion:   obj.MEAN_MOTION    || null,
-        revAtEpoch:   obj.REV_AT_EPOCH   || null,
-        bstar:        obj.BSTAR          || null,
-        satrec,
-        tle1,
-        tle2,
-      });
+      sats.push({ name, tle1, tle2, satrec });
     } catch {
-      // Skip malformed entries
+      // Skip malformed TLEs
     }
   }
 
@@ -48,28 +37,69 @@ function parseSatellites(jsonData) {
 }
 
 // -------------------------------------------------------------------
-// Get satellite data — from KV cache if fresh, otherwise fetch
+// Get TLE data — from KV cache if fresh, otherwise fetch
 // -------------------------------------------------------------------
 async function getTLEs() {
   try {
     const cached = await kv.get(TLE_CACHE_KEY);
-    if (cached) return parseSatellites(JSON.parse(cached));
+    if (cached) return parseTLEs(cached);
   } catch {
     // Cache miss or KV error — fall through to fetch
   }
 
-  const response = await fetch(CELESTRAK_URL);
+  const response = await fetch(CELESTRAK_TLE_URL);
   if (!response.ok) throw new Error('Failed to fetch data from CelesTrak');
 
-  const jsonData = await response.json();
+  const rawText = await response.text();
 
   try {
-    await kv.set(TLE_CACHE_KEY, JSON.stringify(jsonData), { ex: TLE_CACHE_TTL });
+    await kv.set(TLE_CACHE_KEY, rawText, { ex: TLE_CACHE_TTL });
   } catch {
     // Cache write failure is non-fatal
   }
 
-  return parseSatellites(jsonData);
+  return parseTLEs(rawText);
+}
+
+// -------------------------------------------------------------------
+// Fetch rich JSON metadata for a single satellite by NORAD ID
+// -------------------------------------------------------------------
+async function getGPData(noradId) {
+  const cacheKey = `gp:${noradId}`;
+
+  try {
+    const cached = await kv.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch {}
+
+  try {
+    const url = `https://celestrak.org/NORAD/elements/gp.php?CATNR=${noradId}&FORMAT=json`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const obj = Array.isArray(data) ? data[0] : data;
+    if (!obj) return null;
+
+    const gpData = {
+      objectId:     obj.OBJECT_ID    || null,
+      objectType:   obj.OBJECT_TYPE  || 'UNKNOWN',
+      epoch:        obj.EPOCH        || null,
+      inclination:  obj.INCLINATION  || null,
+      eccentricity: obj.ECCENTRICITY || null,
+      meanMotion:   obj.MEAN_MOTION  || null,
+      revAtEpoch:   obj.REV_AT_EPOCH || null,
+      bstar:        obj.BSTAR        || null,
+    };
+
+    try {
+      await kv.set(cacheKey, JSON.stringify(gpData), { ex: TLE_CACHE_TTL });
+    } catch {}
+
+    return gpData;
+  } catch {
+    return null;
+  }
 }
 
 // -------------------------------------------------------------------
@@ -211,28 +241,34 @@ export default async function handler(req, res) {
       nearestDistance = dist;
       nearest = {
         name: sat.name,
-        objectId: sat.objectId,
-        objectType: sat.objectType,
-        noradId: sat.noradId,
-        epoch: sat.epoch,
+        noradId: sat.tle1.substring(2, 7).trim(),
         lat: parseFloat(pos.lat.toFixed(4)),
         lng: parseFloat(pos.lng.toFixed(4)),
         alt: parseFloat(pos.alt.toFixed(2)),
         angularDistance: parseFloat(dist.toFixed(2)),
-        inclination: sat.inclination,
-        eccentricity: sat.eccentricity,
-        meanMotion: sat.meanMotion,
-        revAtEpoch: sat.revAtEpoch,
-        bstar: sat.bstar,
         tle1: sat.tle1,
         tle2: sat.tle2,
       };
     }
   }
 
-  // Enrich with SATCAT data
+  // Enrich nearest with rich metadata from individual lookups
   if (nearest) {
-    const satcat = await getSatcatInfo(nearest.noradId);
+    const [gpData, satcat] = await Promise.all([
+      getGPData(nearest.noradId),
+      getSatcatInfo(nearest.noradId),
+    ]);
+
+    if (gpData) {
+      nearest.objectId     = gpData.objectId;
+      nearest.objectType   = gpData.objectType;
+      nearest.epoch        = gpData.epoch;
+      nearest.inclination  = gpData.inclination;
+      nearest.eccentricity = gpData.eccentricity;
+      nearest.meanMotion   = gpData.meanMotion;
+      nearest.revAtEpoch   = gpData.revAtEpoch;
+      nearest.bstar        = gpData.bstar;
+    }
 
     if (satcat) {
       nearest.country    = satcat.country;
