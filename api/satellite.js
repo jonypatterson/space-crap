@@ -2,7 +2,7 @@ import { kv } from '@vercel/kv';
 import * as satellite from 'satellite.js';
 
 // --- Config ---
-const RATE_LIMIT = 10;
+const RATE_LIMIT = 30;
 const RATE_WINDOW = 60; // seconds
 const TLE_CACHE_KEY = 'celestrak:active_tle';
 const TLE_CACHE_TTL = 7200; // 2 hours in seconds
