@@ -1,6 +1,11 @@
 import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
+let redis;
+try {
+  redis = Redis.fromEnv();
+} catch (e) {
+  console.error('Redis init failed:', e.message);
+}
 const RATE_LIMIT = 10;
 const RATE_WINDOW = 60; // seconds
 
