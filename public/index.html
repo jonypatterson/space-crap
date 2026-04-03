@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEARSAT — Nearest Satellite Overhead</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #060606;
+      --panel: #0a0a0a;
+      --amber: #ffb000;
+      --cyan: #00e5ff;
+      --green: #00ff88;
+      --led-white: #e8e8e8;
+      --dim: #4a4a4a;
+      --dot-size: 4px;
+    }
+
+    body {
+      font-family: 'VT323', monospace;
+      background: var(--bg);
+      color: var(--led-white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ---- Orbital rings (background decoration) ---- */
+    .orbital {
+      position: fixed;
+      border-radius: 50%;
+      border: 1px solid rgba(255,176,0,0.04);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orbital-1 {
+      width: 700px; height: 700px;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      animation: spin 30s linear infinite;
+    }
+    .orbital-1::after {
+      content: '';
+      position: absolute;
+      top: -3px; left: 50%;
+      width: 6px; height: 6px;
+      background: var(--amber);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--amber), 0 0 20px rgba(255,176,0,0.3);
+    }
+    .orbital-2 {
+      width: 480px; height: 480px;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      border-color: rgba(0,229,255,0.03);
+      animation: spin 22s linear infinite reverse;
+    }
+    .orbital-2::after {
+      content: '';
+      position: absolute;
+      top: -3px; left: 50%;
+      width: 5px; height: 5px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--cyan);
+    }
+    @keyframes spin {
+      to { transform: translate(-50%,-50%) rotate(360deg); }
+    }
+
+    /* ---- Dot-matrix display panel ---- */
+    .display {
+      position: relative;
+      z-index: 1;
+      background: var(--panel);
+      max-width: 620px;
+      width: 100%;
+      border-radius: 3px;
+      /* Metallic bezel like the physical board */
+      border: 3px solid #3a3a3a;
+      box-shadow:
+        inset 0 0 40px rgba(0,0,0,0.6),
+        0 8px 40px rgba(0,0,0,0.9),
+        0 0 0 1px #1a1a1a;
+      overflow: hidden;
+    }
+
+    /* The dot matrix LED grid overlay — this is the key effect.
+       Creates a mask of tiny circular holes on a dark layer,
+       so all content underneath appears as individual lit dots. */
+    .display::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle, transparent 1px, rgba(5,5,5,0.65) 1.2px);
+      background-size: var(--dot-size) var(--dot-size);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .display-inner {
+      padding: 28px 32px;
+      /* Faint dot grid on the background — the "off" LEDs */
+      background-image: radial-gradient(circle, #111 0.6px, transparent 0.6px);
+      background-size: var(--dot-size) var(--dot-size);
+    }
+
+    /* ---- Header ---- */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 22px;
+      color: var(--amber);
+      text-shadow:
+        0 0 8px rgba(255,176,0,0.6),
+        0 0 20px rgba(255,176,0,0.25);
+      letter-spacing: 6px;
+    }
+    .tagline {
+      margin-top: 8px;
+      font-size: 18px;
+      color: var(--dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ---- Divider ---- */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--amber), transparent);
+      opacity: 0.25;
+      margin: 14px 0;
+    }
+
+    /* ---- Status / loading ---- */
+    #status {
+      text-align: center;
+      padding: 24px 0;
+      font-size: 22px;
+      color: var(--cyan);
+      text-shadow: 0 0 8px rgba(0,229,255,0.5);
+      position: relative;
+    }
+    #status.error {
+      color: #ff4444;
+      text-shadow: 0 0 8px rgba(255,68,68,0.5);
+    }
+
+    /* Scanning line animation */
+    .scan-line {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      animation: scan 2s ease-in-out infinite;
+    }
+    @keyframes scan {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .cursor {
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* ---- Result ---- */
+    #result {
+      display: none;
+    }
+    #result.visible {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .sat-name {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 15px;
+      color: var(--green);
+      text-shadow:
+        0 0 8px rgba(0,255,136,0.6),
+        0 0 18px rgba(0,255,136,0.25);
+      text-align: center;
+      margin: 16px 0;
+      line-height: 1.7;
+      word-break: break-all;
+    }
+
+    /* Data readout grid */
+    .data-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 20px;
+      margin: 14px 0;
+    }
+    .data-label {
+      font-size: 18px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .data-value {
+      font-size: 22px;
+      color: var(--led-white);
+      text-shadow: 0 0 4px rgba(255,255,255,0.25);
+      text-align: right;
+    }
+
+    /* Track link */
+    .track-link {
+      display: block;
+      text-align: center;
+      margin-top: 14px;
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 18px;
+      letter-spacing: 1px;
+      text-shadow: 0 0 6px rgba(0,229,255,0.3);
+      transition: text-shadow 0.2s;
+    }
+    .track-link:hover {
+      text-shadow: 0 0 12px rgba(0,229,255,0.6);
+    }
+
+    /* Button */
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      position: relative;
+      z-index: 60; /* above the dot overlay */
+    }
+    .btn:hover {
+      background: rgba(255,176,0,0.08);
+      box-shadow: 0 0 14px rgba(255,176,0,0.2);
+    }
+    .btn:active {
+      background: rgba(255,176,0,0.15);
+    }
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Last checked timestamp */
+    .last-checked {
+      text-align: center;
+      color: var(--dim);
+      font-size: 16px;
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+
+    /* ---- Footer ---- */
+    .footer {
+      position: relative;
+      z-index: 1;
+      margin-top: 20px;
+      text-align: center;
+      color: #2a2a2a;
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+    .footer a {
+      color: #3a3a3a;
+      text-decoration: none;
+    }
+    .footer a:hover { color: var(--dim); }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 500px) {
+      .display-inner { padding: 20px 16px; }
+      .header h1 { font-size: 16px; letter-spacing: 3px; }
+      .tagline { font-size: 14px; }
+      .sat-name { font-size: 11px; }
+      .data-label { font-size: 15px; }
+      .data-value { font-size: 18px; }
+      .btn { font-size: 8px; padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="orbital orbital-1"></div>
+  <div class="orbital orbital-2"></div>
+
+  <div class="display">
+    <div class="display-inner">
+
+      <div class="header">
+        <h1>NEARSAT</h1>
+        <div class="tagline">nearest satellite overhead</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="status">
+        ACQUIRING LOCATION<span class="cursor">_</span>
+        <div class="scan-line"></div>
+      </div>
+
+      <div id="result">
+        <div class="sat-name" id="sat-name"></div>
+
+        <div class="divider"></div>
+
+        <div class="data-grid">
+          <span class="data-label">NORAD ID</span>
+          <span class="data-value" id="sat-id">&mdash;</span>
+
+          <span class="data-label">ALTITUDE</span>
+          <span class="data-value" id="sat-alt">&mdash;</span>
+
+          <span class="data-label">POSITION</span>
+          <span class="data-value" id="sat-pos">&mdash;</span>
+
+          <span class="data-label">ANGULAR DIST</span>
+          <span class="data-value" id="sat-angle">&mdash;</span>
+
+          <span class="data-label">LAUNCHED</span>
+          <span class="data-value" id="sat-launch">&mdash;</span>
+
+          <span class="data-label">DESIGNATOR</span>
+          <span class="data-value" id="sat-intl">&mdash;</span>
+        </div>
+
+        <a class="track-link" id="track-link" href="#" target="_blank" rel="noopener">
+          ▸ TRACK ON N2YO
+        </a>
+
+        <button class="btn" id="refresh-btn">&#9670; CHECK AGAIN</button>
+
+        <div class="last-checked" id="last-checked"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    DATA VIA <a href="https://www.n2yo.com" target="_blank" rel="noopener">N2YO.COM</a>
+  </div>
+
+  <script>
+    (function () {
+      // DOM
+      const statusEl    = document.getElementById('status');
+      const resultEl    = document.getElementById('result');
+      const satNameEl   = document.getElementById('sat-name');
+      const satIdEl     = document.getElementById('sat-id');
+      const satAltEl    = document.getElementById('sat-alt');
+      const satPosEl    = document.getElementById('sat-pos');
+      const satAngleEl  = document.getElementById('sat-angle');
+      const satLaunchEl = document.getElementById('sat-launch');
+      const satIntlEl   = document.getElementById('sat-intl');
+      const trackLinkEl = document.getElementById('track-link');
+      const refreshBtn  = document.getElementById('refresh-btn');
+      const lastChecked = document.getElementById('last-checked');
+
+      let loading = false;
+
+      // Helpers
+      function showStatus(msg, isError) {
+        statusEl.style.display = 'block';
+        statusEl.className = isError ? 'error' : '';
+        statusEl.innerHTML = isError
+          ? msg
+          : msg + '<span class="cursor">_</span><div class="scan-line"></div>';
+        resultEl.classList.remove('visible');
+      }
+
+      function getUserLocation() {
+        return new Promise(function (resolve, reject) {
+          if (!navigator.geolocation) {
+            return reject(new Error('Geolocation is not supported by your browser.'));
+          }
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            },
+            function (err) {
+              var msgs = {
+                1: 'Location access denied. Please enable location in your browser settings.',
+                2: 'Location unavailable. Please try again.',
+                3: 'Location request timed out. Please try again.'
+              };
+              reject(new Error(msgs[err.code] || 'Unknown location error.'));
+            },
+            { enableHighAccuracy: false, timeout: 10000 }
+          );
+        });
+      }
+
+      function fmtCoord(lat, lng) {
+        var latD = lat >= 0 ? 'N' : 'S';
+        var lngD = lng >= 0 ? 'E' : 'W';
+        return Math.abs(lat).toFixed(1) + '°' + latD + '  ' + Math.abs(lng).toFixed(1) + '°' + lngD;
+      }
+
+      function renderSatellite(sat) {
+        if (!sat) {
+          showStatus('NO SATELLITES DETECTED OVERHEAD', true);
+          return;
+        }
+
+        statusEl.style.display = 'none';
+        resultEl.classList.add('visible');
+
+        satNameEl.textContent = sat.satname || 'UNKNOWN';
+        satIdEl.textContent   = sat.satid   || '\u2014';
+        satAltEl.textContent  = sat.satalt != null ? sat.satalt.toFixed(1) + ' KM' : '\u2014';
+        satPosEl.textContent  = (sat.satlat != null && sat.satlng != null)
+          ? fmtCoord(sat.satlat, sat.satlng)
+          : '\u2014';
+        satAngleEl.textContent = sat.angularDistance != null
+          ? sat.angularDistance.toFixed(1) + '°'
+          : '\u2014';
+        satLaunchEl.textContent = sat.launchDate    || '\u2014';
+        satIntlEl.textContent   = sat.intDesignator || '\u2014';
+
+        trackLinkEl.href = 'https://www.n2yo.com/satellite/?s=' + sat.satid;
+
+        var now = new Date();
+        lastChecked.textContent = 'LAST CHECK: ' + now.toLocaleTimeString();
+      }
+
+      // Main
+      async function getNearestSatellite() {
+        if (loading) return;
+        loading = true;
+        refreshBtn.disabled = true;
+
+        showStatus('ACQUIRING LOCATION');
+
+        try {
+          var loc = await getUserLocation();
+          showStatus('SCANNING ORBITAL OBJECTS');
+
+          var res  = await fetch('/api/satellite?lat=' + loc.lat + '&lng=' + loc.lng);
+          var data = await res.json();
+
+          if (res.status === 429) {
+            showStatus('RATE LIMIT EXCEEDED — TRY AGAIN SHORTLY', true);
+            return;
+          }
+          if (!res.ok || data.error) {
+            showStatus(data.error || 'SIGNAL LOST — PLEASE RETRY', true);
+            return;
+          }
+
+          renderSatellite(data.nearest);
+        } catch (err) {
+          showStatus(err.message || 'CONNECTION FAILURE', true);
+        } finally {
+          loading = false;
+          refreshBtn.disabled = false;
+        }
+      }
+
+      refreshBtn.addEventListener('click', getNearestSatellite);
+      getNearestSatellite();
+    })();
+  </script>
+
+</body>
+</html>
