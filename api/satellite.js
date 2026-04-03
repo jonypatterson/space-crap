@@ -125,7 +125,11 @@ async function getSatcatInfo(noradId) {
 
     if (!record) return null;
 
+    // Map SATCAT short codes to display names
+    const typeMap = { 'PAY': 'PAYLOAD', 'R/B': 'ROCKET BODY', 'DEB': 'DEBRIS', 'UNK': 'UNKNOWN' };
+
     const satcat = {
+      objectType: typeMap[record.OBJECT_TYPE] || record.OBJECT_TYPE || null,
       country:    record.COUNTRY     || null,
       launchDate: record.LAUNCH_DATE || null,
       decayDate:  record.DECAY_DATE  || null,
@@ -271,6 +275,7 @@ export default async function handler(req, res) {
     }
 
     if (satcat) {
+      nearest.objectType = satcat.objectType || nearest.objectType;
       nearest.country    = satcat.country;
       nearest.launchDate = satcat.launchDate;
       nearest.decayDate  = satcat.decayDate;
