@@ -426,6 +426,9 @@
           <span class="data-label">COUNTRY</span>
           <span class="data-value" id="sat-country">&mdash;</span>
 
+          <span class="data-label">MISSION</span>
+          <span class="data-value" id="sat-mission">&mdash;</span>
+
           <hr class="section-divider">
 
           <!-- Position -->
@@ -511,6 +514,7 @@
       const satSizeEl     = document.getElementById('sat-size');
       const satStatusEl   = document.getElementById('sat-status');
       const satAgeEl      = document.getElementById('sat-age');
+      const satMissionEl  = document.getElementById('sat-mission');
       const trackLinkEl   = document.getElementById('track-link');
       const refreshBtn    = document.getElementById('refresh-btn');
       const lastChecked   = document.getElementById('last-checked');
@@ -586,8 +590,8 @@
       }
 
       function getTypeBadge(type) {
-        var glyphs = { 'PAYLOAD': '◈', 'ROCKET BODY': '◉', 'DEBRIS': '⚠', 'UNKNOWN': '?' };
-        var classes = { 'PAYLOAD': 'type-payload', 'ROCKET BODY': 'type-rocket', 'DEBRIS': 'type-debris', 'UNKNOWN': 'type-unknown' };
+        var glyphs = { 'WORKING SATELLITE': '◈', 'SPENT ROCKET': '◉', 'JUNK': '⚠', 'UNKNOWN': '?' };
+        var classes = { 'WORKING SATELLITE': 'type-payload', 'SPENT ROCKET': 'type-rocket', 'JUNK': 'type-debris', 'UNKNOWN': 'type-unknown' };
         var glyph = glyphs[type] || '?';
         var cls = classes[type] || 'type-unknown';
         return '<span class="' + cls + '">' + glyph + ' ' + type + '</span>';
@@ -640,6 +644,7 @@
         satIdEl.textContent      = sat.noradId || '\u2014';
         satIntlEl.textContent    = sat.objectId || '\u2014';
         satCountryEl.textContent = decodeCountry(sat.country);
+        satMissionEl.textContent = sat.mission || '\u2014';
 
         // Position
         satAltEl.textContent = sat.alt != null ? sat.alt.toFixed(1) + ' KM' : '\u2014';

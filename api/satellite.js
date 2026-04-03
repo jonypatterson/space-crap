@@ -125,12 +125,12 @@ async function getSatcatInfo(noradId) {
 
     if (!record) return null;
 
-    // Map SATCAT short codes to display names
-    const typeMap = { 'PAY': 'PAYLOAD', 'R/B': 'ROCKET BODY', 'DEB': 'DEBRIS', 'UNK': 'UNKNOWN' };
+    // Map SATCAT short codes to friendly names
+    const typeMap = { 'PAY': 'WORKING SATELLITE', 'R/B': 'SPENT ROCKET', 'DEB': 'JUNK', 'UNK': 'UNKNOWN' };
 
     const satcat = {
       objectType: typeMap[record.OBJECT_TYPE] || record.OBJECT_TYPE || null,
-      country:    record.COUNTRY     || null,
+      country:    record.OWNER       || null,
       launchDate: record.LAUNCH_DATE || null,
       decayDate:  record.DECAY_DATE  || null,
       size:       record.RCS_SIZE    || null,
@@ -147,6 +147,68 @@ async function getSatcatInfo(noradId) {
   } catch {
     return null;
   }
+}
+
+// -------------------------------------------------------------------
+// Infer mission/use from satellite name
+// -------------------------------------------------------------------
+function inferMission(name) {
+  if (!name) return null;
+  const n = name.toUpperCase();
+
+  if (n.includes('STARLINK'))  return 'INTERNET';
+  if (n.includes('ONEWEB'))    return 'INTERNET';
+  if (n.includes('KUIPER'))    return 'INTERNET';
+  if (n.includes('IRIDIUM'))   return 'COMMUNICATIONS';
+  if (n.includes('INTELSAT'))  return 'COMMUNICATIONS';
+  if (n.includes('SES'))       return 'COMMUNICATIONS';
+  if (n.includes('TDRS'))      return 'COMMUNICATIONS';
+  if (n.includes('ORBCOMM'))   return 'COMMUNICATIONS';
+  if (n.includes('GLOBALSTAR')) return 'COMMUNICATIONS';
+  if (n.includes('INMARSAT'))  return 'COMMUNICATIONS';
+  if (n.includes('EUTELSAT'))  return 'COMMUNICATIONS';
+  if (n.includes('VIASAT'))    return 'COMMUNICATIONS';
+  if (n.includes('GPS'))       return 'NAVIGATION';
+  if (n.includes('NAVSTAR'))   return 'NAVIGATION';
+  if (n.includes('GLONASS'))   return 'NAVIGATION';
+  if (n.includes('GALILEO'))   return 'NAVIGATION';
+  if (n.includes('BEIDOU'))    return 'NAVIGATION';
+  if (n.includes('NOAA'))      return 'WEATHER';
+  if (n.includes('GOES'))      return 'WEATHER';
+  if (n.includes('METEOSAT'))  return 'WEATHER';
+  if (n.includes('METOP'))     return 'WEATHER';
+  if (n.includes('FENGYUN'))   return 'WEATHER';
+  if (n.includes('HIMAWARI'))  return 'WEATHER';
+  if (n.includes('SUOMI'))     return 'WEATHER';
+  if (n.includes('DMSP'))      return 'WEATHER';
+  if (n.includes('LANDSAT'))   return 'EARTH OBSERVATION';
+  if (n.includes('SENTINEL'))  return 'EARTH OBSERVATION';
+  if (n.includes('WORLDVIEW')) return 'EARTH OBSERVATION';
+  if (n.includes('PLANET'))    return 'EARTH OBSERVATION';
+  if (n.includes('DOVE'))      return 'EARTH OBSERVATION';
+  if (n.includes('FLOCK'))     return 'EARTH OBSERVATION';
+  if (n.includes('SKYSAT'))    return 'EARTH OBSERVATION';
+  if (n.includes('ICEYE'))     return 'EARTH OBSERVATION';
+  if (n.includes('CAPELLA'))   return 'EARTH OBSERVATION';
+  if (n.includes('YAOGAN'))    return 'RECONNAISSANCE';
+  if (n.includes('USA '))      return 'MILITARY';
+  if (n.includes('NROL'))      return 'MILITARY';
+  if (n.includes('COSMOS'))    return 'MILITARY';
+  if (n.includes('KOSMOS'))    return 'MILITARY';
+  if (n.includes('QIANFAN'))   return 'INTERNET';
+  if (n.includes('HUBBLE'))    return 'SPACE TELESCOPE';
+  if (n.includes('JWST'))      return 'SPACE TELESCOPE';
+  if (n.includes('CHANDRA'))   return 'SPACE TELESCOPE';
+  if (n.includes('ISS'))       return 'SPACE STATION';
+  if (n.includes('ZARYA'))     return 'SPACE STATION';
+  if (n.includes('TIANHE'))    return 'SPACE STATION';
+  if (n.includes('CSS'))       return 'SPACE STATION';
+  if (n.includes('SPACEBEE'))  return 'IOT';
+  if (n.includes('LEMUR'))     return 'WEATHER';
+  if (n.includes('HAWK'))      return 'SIGNALS INTELLIGENCE';
+  if (n.includes('UMBRA'))     return 'EARTH OBSERVATION';
+
+  return null;
 }
 
 // -------------------------------------------------------------------
@@ -291,6 +353,9 @@ export default async function handler(req, res) {
     nearest.speed = nearest.meanMotion
       ? parseFloat(((nearest.meanMotion * 2 * Math.PI * (6371 + nearest.alt)) / 1440).toFixed(2))
       : null;
+
+    // Infer mission/use from satellite name
+    nearest.mission = inferMission(nearest.name);
   }
 
   return res.status(200).json({ nearest });
