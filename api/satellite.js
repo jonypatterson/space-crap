@@ -7,29 +7,40 @@ const RATE_WINDOW = 60; // seconds
 const TLE_CACHE_KEY = 'celestrak:active_tle';
 const TLE_CACHE_TTL = 7200; // 2 hours in seconds
 
-// CelesTrak URL — "active" satellites only (filters out most debris)
 const CELESTRAK_URL =
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=full-catalog&FORMAT=json';
 
 // -------------------------------------------------------------------
-// Parse a raw TLE text blob into an array of satellite objects
+// Parse CelesTrak JSON into satellite objects
 // -------------------------------------------------------------------
-function parseTLEs(rawText) {
-  const lines = rawText.trim().split('\n').map(l => l.trim());
+function parseSatellites(jsonData) {
   const sats = [];
 
-  for (let i = 0; i < lines.length - 2; i += 3) {
-    const name = lines[i];
-    const tle1 = lines[i + 1];
-    const tle2 = lines[i + 2];
+  for (const obj of jsonData) {
+    const tle1 = obj.TLE_LINE1;
+    const tle2 = obj.TLE_LINE2;
 
-    if (!tle1.startsWith('1 ') || !tle2.startsWith('2 ')) continue;
+    if (!tle1 || !tle2) continue;
 
     try {
       const satrec = satellite.twoline2satrec(tle1, tle2);
-      sats.push({ name, tle1, tle2, satrec });
+      sats.push({
+        name:         obj.OBJECT_NAME,
+        objectId:     obj.OBJECT_ID      || null,
+        objectType:   obj.OBJECT_TYPE    || 'UNKNOWN',
+        noradId:      String(obj.NORAD_CAT_ID),
+        epoch:        obj.EPOCH          || null,
+        inclination:  obj.INCLINATION    || null,
+        eccentricity: obj.ECCENTRICITY   || null,
+        meanMotion:   obj.MEAN_MOTION    || null,
+        revAtEpoch:   obj.REV_AT_EPOCH   || null,
+        bstar:        obj.BSTAR          || null,
+        satrec,
+        tle1,
+        tle2,
+      });
     } catch {
-      // Skip malformed TLEs
+      // Skip malformed entries
     }
   }
 
@@ -37,28 +48,71 @@ function parseTLEs(rawText) {
 }
 
 // -------------------------------------------------------------------
-// Get TLE data — from KV cache if fresh, otherwise fetch from CelesTrak
+// Get satellite data — from KV cache if fresh, otherwise fetch
 // -------------------------------------------------------------------
 async function getTLEs() {
   try {
     const cached = await kv.get(TLE_CACHE_KEY);
-    if (cached) return parseTLEs(cached);
+    if (cached) return parseSatellites(JSON.parse(cached));
   } catch {
     // Cache miss or KV error — fall through to fetch
   }
 
   const response = await fetch(CELESTRAK_URL);
-  if (!response.ok) throw new Error('Failed to fetch TLE data from CelesTrak');
+  if (!response.ok) throw new Error('Failed to fetch data from CelesTrak');
 
-  const rawText = await response.text();
+  const jsonData = await response.json();
 
   try {
-    await kv.set(TLE_CACHE_KEY, rawText, { ex: TLE_CACHE_TTL });
+    await kv.set(TLE_CACHE_KEY, JSON.stringify(jsonData), { ex: TLE_CACHE_TTL });
   } catch {
     // Cache write failure is non-fatal
   }
 
-  return parseTLEs(rawText);
+  return parseSatellites(jsonData);
+}
+
+// -------------------------------------------------------------------
+// SATCAT lookup with caching
+// -------------------------------------------------------------------
+async function getSatcatInfo(noradId) {
+  const cacheKey = `satcat:${noradId}`;
+
+  try {
+    const cached = await kv.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch {
+    // Cache miss
+  }
+
+  try {
+    const url = `https://celestrak.org/satcat/records.php?CATNR=${noradId}&FORMAT=json`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const record = Array.isArray(data) ? data[0] : data;
+
+    if (!record) return null;
+
+    const satcat = {
+      country:    record.COUNTRY     || null,
+      launchDate: record.LAUNCH_DATE || null,
+      decayDate:  record.DECAY_DATE  || null,
+      size:       record.RCS_SIZE    || null,
+      status:     record.OPS_STATUS_CODE || null,
+    };
+
+    try {
+      await kv.set(cacheKey, JSON.stringify(satcat), { ex: 86400 });
+    } catch {
+      // Non-fatal
+    }
+
+    return satcat;
+  } catch {
+    return null;
+  }
 }
 
 // -------------------------------------------------------------------
@@ -157,18 +211,45 @@ export default async function handler(req, res) {
       nearestDistance = dist;
       nearest = {
         name: sat.name,
+        objectId: sat.objectId,
+        objectType: sat.objectType,
+        noradId: sat.noradId,
+        epoch: sat.epoch,
         lat: parseFloat(pos.lat.toFixed(4)),
         lng: parseFloat(pos.lng.toFixed(4)),
         alt: parseFloat(pos.alt.toFixed(2)),
         angularDistance: parseFloat(dist.toFixed(2)),
+        inclination: sat.inclination,
+        eccentricity: sat.eccentricity,
+        meanMotion: sat.meanMotion,
+        revAtEpoch: sat.revAtEpoch,
+        bstar: sat.bstar,
         tle1: sat.tle1,
         tle2: sat.tle2,
-        // Extract NORAD ID from TLE line 1 (characters 3-7)
-        noradId: sat.tle1.substring(2, 7).trim(),
-        // Extract launch date year from TLE line 2 international designator
-        launchYear: sat.tle1.substring(9, 11).trim(),
       };
     }
+  }
+
+  // Enrich with SATCAT data
+  if (nearest) {
+    const satcat = await getSatcatInfo(nearest.noradId);
+
+    if (satcat) {
+      nearest.country    = satcat.country;
+      nearest.launchDate = satcat.launchDate;
+      nearest.decayDate  = satcat.decayDate;
+      nearest.size       = satcat.size;
+      nearest.status     = satcat.status;
+    }
+
+    // Derived fields
+    nearest.orbitalPeriod = nearest.meanMotion
+      ? parseFloat((1440 / nearest.meanMotion).toFixed(1))
+      : null;
+
+    nearest.speed = nearest.meanMotion
+      ? parseFloat(((nearest.meanMotion * 2 * Math.PI * (6371 + nearest.alt)) / 1440).toFixed(2))
+      : null;
   }
 
   return res.status(200).json({ nearest });

@@ -204,9 +204,39 @@
         0 0 8px rgba(0,255,136,0.6),
         0 0 18px rgba(0,255,136,0.25);
       text-align: center;
-      margin: 16px 0;
+      margin: 16px 0 4px;
       line-height: 1.7;
       word-break: break-all;
+    }
+
+    /* Type badge */
+    .type-badge {
+      text-align: center;
+      font-size: 16px;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .type-payload  { color: #00ff9d; }
+    .type-rocket   { color: #f0a500; }
+    .type-debris   { color: #ff4444; }
+    .type-unknown  { color: #666; }
+
+    /* Decay warning */
+    .decay-warning {
+      text-align: center;
+      color: var(--amber);
+      font-size: 18px;
+      letter-spacing: 1px;
+      margin: 8px 0;
+      text-shadow: 0 0 6px rgba(255,176,0,0.4);
+    }
+
+    /* Section divider (subtle) */
+    .section-divider {
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin: 10px 0;
+      grid-column: 1 / -1;
     }
 
     /* Data readout grid */
@@ -228,6 +258,50 @@
       color: var(--led-white);
       text-shadow: 0 0 6px rgba(255,255,255,0.35);
       text-align: right;
+    }
+
+    /* Color-coded altitude */
+    .alt-vlow  { color: var(--green); text-shadow: 0 0 6px rgba(0,255,136,0.35); }
+    .alt-leo   { color: var(--led-white); }
+    .alt-meo   { color: var(--amber); text-shadow: 0 0 6px rgba(255,176,0,0.35); }
+    .alt-geo   { color: var(--cyan); text-shadow: 0 0 6px rgba(0,229,255,0.35); }
+
+    /* Pulsing status dot */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.3; }
+    }
+    .status-active::before {
+      content: '● ';
+      color: #00ff9d;
+      animation: pulse 2s infinite;
+    }
+    .status-inactive::before {
+      content: '● ';
+      color: #666;
+    }
+
+    /* Stale data warning */
+    .data-stale {
+      color: var(--amber) !important;
+      text-shadow: 0 0 6px rgba(255,176,0,0.35) !important;
+    }
+
+    /* CRT scanline overlay */
+    .display::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.04) 2px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 51;
+      border-radius: inherit;
     }
 
     /* Track link */
@@ -335,13 +409,26 @@
 
       <div id="result">
         <div class="sat-name" id="sat-name"></div>
+        <div class="type-badge" id="type-badge"></div>
+
+        <div class="decay-warning" id="decay-warning" style="display:none"></div>
 
         <div class="divider"></div>
 
         <div class="data-grid">
+          <!-- Identity -->
           <span class="data-label">NORAD ID</span>
           <span class="data-value" id="sat-id">&mdash;</span>
 
+          <span class="data-label">DESIGNATOR</span>
+          <span class="data-value" id="sat-intl">&mdash;</span>
+
+          <span class="data-label">COUNTRY</span>
+          <span class="data-value" id="sat-country">&mdash;</span>
+
+          <hr class="section-divider">
+
+          <!-- Position -->
           <span class="data-label">ALTITUDE</span>
           <span class="data-value" id="sat-alt">&mdash;</span>
 
@@ -351,11 +438,38 @@
           <span class="data-label">ANGULAR DIST</span>
           <span class="data-value" id="sat-angle">&mdash;</span>
 
+          <hr class="section-divider">
+
+          <!-- Orbital mechanics -->
+          <span class="data-label">SPEED</span>
+          <span class="data-value" id="sat-speed">&mdash;</span>
+
+          <span class="data-label">ORBITAL PERIOD</span>
+          <span class="data-value" id="sat-period">&mdash;</span>
+
+          <span class="data-label">INCLINATION</span>
+          <span class="data-value" id="sat-incl">&mdash;</span>
+
+          <span class="data-label">ECCENTRICITY</span>
+          <span class="data-value" id="sat-ecc">&mdash;</span>
+
+          <span class="data-label">TOTAL ORBITS</span>
+          <span class="data-value" id="sat-orbits">&mdash;</span>
+
+          <hr class="section-divider">
+
+          <!-- Classification -->
           <span class="data-label">LAUNCHED</span>
           <span class="data-value" id="sat-launch">&mdash;</span>
 
-          <span class="data-label">DESIGNATOR</span>
-          <span class="data-value" id="sat-intl">&mdash;</span>
+          <span class="data-label">SIZE</span>
+          <span class="data-value" id="sat-size">&mdash;</span>
+
+          <span class="data-label">STATUS</span>
+          <span class="data-value" id="sat-status">&mdash;</span>
+
+          <span class="data-label">DATA AGE</span>
+          <span class="data-value" id="sat-age">&mdash;</span>
         </div>
 
         <a class="track-link" id="track-link" href="#" target="_blank" rel="noopener">
@@ -371,24 +485,35 @@
   </div>
 
   <div class="footer">
-    DATA VIA <a href="https://www.n2yo.com" target="_blank" rel="noopener">N2YO.COM</a>
+    DATA VIA <a href="https://celestrak.org" target="_blank" rel="noopener">CELESTRAK.ORG</a>
   </div>
 
   <script>
     (function () {
       // DOM
-      const statusEl    = document.getElementById('status');
-      const resultEl    = document.getElementById('result');
-      const satNameEl   = document.getElementById('sat-name');
-      const satIdEl     = document.getElementById('sat-id');
-      const satAltEl    = document.getElementById('sat-alt');
-      const satPosEl    = document.getElementById('sat-pos');
-      const satAngleEl  = document.getElementById('sat-angle');
-      const satLaunchEl = document.getElementById('sat-launch');
-      const satIntlEl   = document.getElementById('sat-intl');
-      const trackLinkEl = document.getElementById('track-link');
-      const refreshBtn  = document.getElementById('refresh-btn');
-      const lastChecked = document.getElementById('last-checked');
+      const statusEl      = document.getElementById('status');
+      const resultEl      = document.getElementById('result');
+      const satNameEl     = document.getElementById('sat-name');
+      const typeBadgeEl   = document.getElementById('type-badge');
+      const decayWarnEl   = document.getElementById('decay-warning');
+      const satIdEl       = document.getElementById('sat-id');
+      const satIntlEl     = document.getElementById('sat-intl');
+      const satCountryEl  = document.getElementById('sat-country');
+      const satAltEl      = document.getElementById('sat-alt');
+      const satPosEl      = document.getElementById('sat-pos');
+      const satAngleEl    = document.getElementById('sat-angle');
+      const satSpeedEl    = document.getElementById('sat-speed');
+      const satPeriodEl   = document.getElementById('sat-period');
+      const satInclEl     = document.getElementById('sat-incl');
+      const satEccEl      = document.getElementById('sat-ecc');
+      const satOrbitsEl   = document.getElementById('sat-orbits');
+      const satLaunchEl   = document.getElementById('sat-launch');
+      const satSizeEl     = document.getElementById('sat-size');
+      const satStatusEl   = document.getElementById('sat-status');
+      const satAgeEl      = document.getElementById('sat-age');
+      const trackLinkEl   = document.getElementById('track-link');
+      const refreshBtn    = document.getElementById('refresh-btn');
+      const lastChecked   = document.getElementById('last-checked');
 
       let loading = false;
 
@@ -430,6 +555,64 @@
         return Math.abs(lat).toFixed(1) + '°' + latD + '  ' + Math.abs(lng).toFixed(1) + '°' + lngD;
       }
 
+      function decodeStatus(code) {
+        var map = {
+          '+': 'ACTIVE', '-': 'INACTIVE', 'P': 'PARTIALLY ACTIVE',
+          'B': 'BACKUP', 'S': 'SPARE', 'X': 'EXTENDED MISSION',
+          'D': 'DECAYING', '?': 'UNKNOWN',
+        };
+        return map[code] || 'UNKNOWN';
+      }
+
+      function decodeCountry(code) {
+        var map = {
+          'US': 'UNITED STATES', 'CN': 'CHINA', 'CIS': 'RUSSIA',
+          'FR': 'FRANCE', 'ESA': 'ESA', 'UK': 'UNITED KINGDOM',
+          'IN': 'INDIA', 'J': 'JAPAN', 'ISS': 'INTL SPACE STATION',
+          'AB': 'ARAB LEAGUE',
+        };
+        return map[code] || code || 'UNKNOWN';
+      }
+
+      function typewriterEffect(element, text, speed) {
+        speed = speed || 40;
+        element.textContent = '';
+        var i = 0;
+        var timer = setInterval(function () {
+          element.textContent += text[i];
+          i++;
+          if (i >= text.length) clearInterval(timer);
+        }, speed);
+      }
+
+      function getTypeBadge(type) {
+        var glyphs = { 'PAYLOAD': '◈', 'ROCKET BODY': '◉', 'DEBRIS': '⚠', 'UNKNOWN': '?' };
+        var classes = { 'PAYLOAD': 'type-payload', 'ROCKET BODY': 'type-rocket', 'DEBRIS': 'type-debris', 'UNKNOWN': 'type-unknown' };
+        var glyph = glyphs[type] || '?';
+        var cls = classes[type] || 'type-unknown';
+        return '<span class="' + cls + '">' + glyph + ' ' + type + '</span>';
+      }
+
+      function getAltClass(alt) {
+        if (alt < 600) return 'alt-vlow';
+        if (alt <= 2000) return 'alt-leo';
+        if (alt <= 35786) return 'alt-meo';
+        return 'alt-geo';
+      }
+
+      function fmtDataAge(epoch) {
+        if (!epoch) return { text: '\u2014', stale: false };
+        var diff = (Date.now() - new Date(epoch).getTime()) / 3600000; // hours
+        var text = diff.toFixed(1) + ' HRS';
+        if (diff > 48) text += ' \u26a0';
+        return { text: text, stale: diff > 48 };
+      }
+
+      function fmtNumber(n) {
+        if (n == null) return '\u2014';
+        return n.toLocaleString();
+      }
+
       function renderSatellite(sat) {
         if (!sat) {
           showStatus('NO SATELLITES DETECTED OVERHEAD', true);
@@ -439,17 +622,53 @@
         statusEl.style.display = 'none';
         resultEl.classList.add('visible');
 
-        satNameEl.textContent = sat.name || 'UNKNOWN';
-        satIdEl.textContent   = sat.noradId   || '\u2014';
-        satAltEl.textContent  = sat.alt != null ? sat.alt.toFixed(1) + ' KM' : '\u2014';
-        satPosEl.textContent  = (sat.lat != null && sat.lng != null)
-          ? fmtCoord(sat.lat, sat.lng)
-          : '\u2014';
+        // Name with typewriter effect
+        typewriterEffect(satNameEl, sat.name || 'UNKNOWN');
+
+        // Type badge
+        typeBadgeEl.innerHTML = getTypeBadge(sat.objectType || 'UNKNOWN');
+
+        // Decay warning
+        if (sat.decayDate) {
+          decayWarnEl.textContent = '\u26a0 REENTRY PREDICTED: ' + sat.decayDate;
+          decayWarnEl.style.display = 'block';
+        } else {
+          decayWarnEl.style.display = 'none';
+        }
+
+        // Identity
+        satIdEl.textContent      = sat.noradId || '\u2014';
+        satIntlEl.textContent    = sat.objectId || '\u2014';
+        satCountryEl.textContent = decodeCountry(sat.country);
+
+        // Position
+        satAltEl.textContent = sat.alt != null ? sat.alt.toFixed(1) + ' KM' : '\u2014';
+        satAltEl.className   = 'data-value ' + (sat.alt != null ? getAltClass(sat.alt) : '');
+        satPosEl.textContent = (sat.lat != null && sat.lng != null)
+          ? fmtCoord(sat.lat, sat.lng) : '\u2014';
         satAngleEl.textContent = sat.angularDistance != null
-          ? sat.angularDistance.toFixed(1) + '°'
-          : '\u2014';
-        satLaunchEl.textContent = sat.launchYear    || '\u2014';
-        satIntlEl.textContent   = '\u2014';
+          ? sat.angularDistance.toFixed(1) + '°' : '\u2014';
+
+        // Orbital mechanics
+        satSpeedEl.textContent  = sat.speed != null ? sat.speed.toFixed(2) + ' KM/S' : '\u2014';
+        satPeriodEl.textContent = sat.orbitalPeriod != null ? sat.orbitalPeriod.toFixed(1) + ' MIN' : '\u2014';
+        satInclEl.textContent   = sat.inclination != null ? sat.inclination.toFixed(1) + '°' : '\u2014';
+        satEccEl.textContent    = sat.eccentricity != null ? sat.eccentricity.toFixed(4) : '\u2014';
+        satOrbitsEl.textContent = fmtNumber(sat.revAtEpoch);
+
+        // Classification
+        satLaunchEl.textContent = sat.launchDate || '\u2014';
+        satSizeEl.textContent   = sat.size || '\u2014';
+
+        // Status with pulsing dot
+        var statusText = decodeStatus(sat.status);
+        var statusClass = (sat.status === '+') ? 'status-active' : 'status-inactive';
+        satStatusEl.innerHTML = '<span class="' + statusClass + '">' + statusText + '</span>';
+
+        // Data age
+        var age = fmtDataAge(sat.epoch);
+        satAgeEl.textContent = age.text;
+        satAgeEl.className = 'data-value' + (age.stale ? ' data-stale' : '');
 
         trackLinkEl.href = 'https://www.n2yo.com/satellite/?s=' + sat.noradId;
 
