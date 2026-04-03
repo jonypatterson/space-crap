@@ -283,16 +283,27 @@
 
     /* Pixel flags */
     .pflag {
-      display: inline-block;
-      font-size: 10px;
-      line-height: 1;
-      letter-spacing: 0;
-      vertical-align: middle;
-      margin-right: 6px;
+      display: block;
+      font-size: 18px;
+      line-height: 1.1;
+      letter-spacing: 1px;
       font-family: monospace;
       text-shadow: none;
+      margin-bottom: 10px;
     }
-    .pflag span { font-size: 10px; }
+    .pflag span { font-size: 18px; }
+
+    /* Flag positioned above name, left-aligned */
+    .flag-name-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 16px 0 4px;
+    }
+    .flag-name-wrap .pflag {
+      align-self: flex-start;
+      margin-left: 8px;
+    }
 
     /* Stale data warning */
     .data-stale {
@@ -421,8 +432,11 @@
       </div>
 
       <div id="result">
-        <div class="sat-name" id="sat-name"></div>
-        <div class="type-badge" id="type-badge"></div>
+        <div class="flag-name-wrap">
+          <div class="pflag" id="sat-flag"></div>
+          <div class="sat-name" id="sat-name"></div>
+          <div class="type-badge" id="type-badge"></div>
+        </div>
 
         <div class="decay-warning" id="decay-warning" style="display:none"></div>
 
@@ -510,6 +524,7 @@
       const statusEl      = document.getElementById('status');
       const resultEl      = document.getElementById('result');
       const satNameEl     = document.getElementById('sat-name');
+      const satFlagEl     = document.getElementById('sat-flag');
       const typeBadgeEl   = document.getElementById('type-badge');
       const decayWarnEl   = document.getElementById('decay-warning');
       const satIdEl       = document.getElementById('sat-id');
@@ -692,6 +707,15 @@
         statusEl.style.display = 'none';
         resultEl.classList.add('visible');
 
+        // Flag above name
+        var flag = pixelFlag(sat.country);
+        if (flag) {
+          satFlagEl.innerHTML = flag;
+          satFlagEl.style.display = 'block';
+        } else {
+          satFlagEl.style.display = 'none';
+        }
+
         // Name with typewriter effect
         typewriterEffect(satNameEl, sat.name || 'UNKNOWN');
 
@@ -709,12 +733,7 @@
         // Identity
         satIdEl.textContent      = sat.noradId || '\u2014';
         satIntlEl.textContent    = sat.objectId || '\u2014';
-        var flag = pixelFlag(sat.country);
-        if (flag) {
-          satCountryEl.innerHTML = '<span class="pflag">' + flag + '</span> ' + decodeCountry(sat.country);
-        } else {
-          satCountryEl.textContent = decodeCountry(sat.country);
-        }
+        satCountryEl.textContent = decodeCountry(sat.country);
         satMissionEl.textContent = sat.mission || '\u2014';
 
         // Position
