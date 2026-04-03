@@ -41,10 +41,13 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(url);
     if (!response.ok) {
+      const text = await response.text();
+      console.error('N2YO error:', response.status, text);
       return res.status(502).json({ error: 'Failed to fetch satellite data' });
     }
 
     const data = await response.json();
+    console.log('N2YO response keys:', Object.keys(data));
     const satellites = data.above;
 
     if (!satellites || satellites.length === 0) {
